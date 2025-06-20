@@ -182,6 +182,19 @@ app.get('/', (req, res) => {
                 transform: translateY(-2px);
             }
             
+            .admin-info {
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 10px;
+                padding: 15px;
+                margin-top: 20px;
+                border-left: 4px solid #4CAF50;
+            }
+            
+            .admin-info h4 {
+                color: #4CAF50;
+                margin-bottom: 10px;
+            }
+            
             @media (max-width: 600px) {
                 .container {
                     padding: 20px;
@@ -225,6 +238,13 @@ app.get('/', (req, res) => {
                     <li>Toque em <strong>"Conectar dispositivo"</strong></li>
                     <li><strong>Escaneie o QR Code</strong> acima</li>
                 </ol>
+            </div>
+            
+            <div class="admin-info">
+                <h4>🎛️ Acesso Administrativo:</h4>
+                <p><strong>Dono:</strong> 258876219853</p>
+                <p><strong>Comando:</strong> /admin</p>
+                <p><strong>Delays:</strong> 2-10 min entre envios</p>
             </div>
             
             <button class="refresh-btn" onclick="location.reload()">
@@ -275,7 +295,8 @@ app.get('/api/status', (req, res) => {
         status: botStatus,
         qrCode: currentQRCode,
         expireTime: qrExpireTime,
-        connected: botStatus.includes('Conectado')
+        connected: botStatus.includes('Conectado'),
+        owner: config.admin.owner
     });
 });
 
@@ -319,6 +340,7 @@ client.on('qr', async qr => {
         console.log(`🔗 https://seu-projeto.railway.app`);
         console.log('\n📱 QR Code disponível na página web!');
         console.log('⏰ Válido por 20 segundos');
+        console.log(`🎛️ Dono: ${config.admin.owner}`);
         console.log('='.repeat(60) + '\n');
         
         // QR Code no terminal também (menor)
@@ -369,9 +391,9 @@ client.on('ready', () => {
     console.log(`👤 Nome: ${client.info.pushname}`);
     console.log(`🌐 Plataforma: ${client.info.platform}`);
     console.log('\n' + '='.repeat(50));
+    console.log(`🎛️ DONO: ${config.admin.owner}`);
     console.log('💡 Para acessar admin, envie: /admin');
-    console.log('📧 Email admin: freefiremaxdojis@gmail.com');
-    console.log('🔑 Senha admin: 006007');
+    console.log('⏰ Delays: 2-10 minutos entre envios');
     console.log('='.repeat(50) + '\n');
     
     Helpers.log('Bot conectado com sucesso na Railway', 'SYSTEM');
@@ -436,8 +458,8 @@ client.on('message', async msg => {
 
         const messageBody = msg.body.trim();
         
-        // Verificar se é comando de admin
-        if (messageBody.startsWith('/admin') || config.admin.numbers.includes(msg.from)) {
+        // Verificar se é o DONO (acesso direto aos comandos admin)
+        if (msg.from === config.admin.owner + '@c.us') {
             await adminHandler.handleAdminMessage(msg);
         } else {
             // Processar como usuário normal
@@ -462,6 +484,19 @@ client.on('group_join', async (notification) => {
     try {
         const chat = await notification.getChat();
         Helpers.log(`Bot adicionado ao grupo: ${chat.name} (${chat.id._serialized})`, 'GROUP');
+        
+        // Notificar o dono
+        const ownerMessage = `👥 *BOT ADICIONADO AO GRUPO*
+
+📱 *Grupo:* ${chat.name}
+👤 *Membros:* ${chat.participants.length}
+🆔 *ID:* ${chat.id._serialized}
+⏰ *Horário:* ${new Date().toLocaleString('pt-BR')}
+
+💡 Use \`/capturar ${chat.name}\` para capturar contatos!`;
+
+        await client.sendMessage(config.admin.owner + '@c.us', ownerMessage);
+        
     } catch (error) {
         Helpers.log(`Erro ao processar entrada em grupo: ${error.message}`, 'ERROR');
     }
@@ -534,6 +569,7 @@ process.on('SIGINT', () => {
 console.log('\n🚀 INICIANDO BOT WHATSAPP NA RAILWAY...');
 console.log('📡 Conectando ao WhatsApp Web...');
 console.log('🌐 Servidor web iniciando...');
+console.log(`🎛️ Dono: ${config.admin.owner}`);
 console.log('⏳ Aguarde o QR Code...\n');
 
 botStatus = '🚀 Iniciando bot...';

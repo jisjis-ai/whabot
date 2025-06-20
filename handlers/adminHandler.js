@@ -6,7 +6,6 @@ const path = require('path');
 class AdminHandler {
     constructor(client) {
         this.client = client;
-        this.adminSessions = new Map(); // Sessões de admin logados
     }
 
     async handleAdminMessage(msg) {
@@ -14,49 +13,23 @@ class AdminHandler {
         const messageBody = msg.body.trim();
         const chat = await msg.getChat();
 
-        // Verificar se é comando de login
-        if (messageBody === '/admin') {
-            await this.handleAdminLogin(msg, chat);
-            return;
+        // Verificar se é o dono (acesso direto)
+        if (userNumber === config.admin.owner + '@c.us') {
+            await this.processOwnerCommand(msg, chat, messageBody);
+        } else {
+            // Outros usuários não têm acesso admin
+            return false;
         }
-
-        // Verificar se está logado
-        if (!this.adminSessions.has(userNumber)) {
-            return; // Não é admin logado, ignorar
-        }
-
-        // Processar comandos de admin
-        await this.processAdminCommand(msg, chat, messageBody);
     }
 
-    async handleAdminLogin(msg, chat) {
-        await Helpers.simulateTyping(chat, 2000);
-        await msg.reply(`🔐 *ÁREA ADMINISTRATIVA*
-
-Digite a senha:`);
-
-        // Marcar como aguardando senha
-        this.adminSessions.set(msg.from, { status: 'awaiting_password' });
-        
-        Helpers.log(`Tentativa de login admin de ${msg.from}`, 'ADMIN');
-    }
-
-    async processAdminCommand(msg, chat, messageBody) {
-        const session = this.adminSessions.get(msg.from);
-        
-        if (session.status === 'awaiting_password') {
-            await this.validatePassword(msg, chat, messageBody);
-            return;
-        }
-
-        if (session.status !== 'authenticated') {
-            return;
-        }
-
-        // Comandos disponíveis para admin autenticado
+    async processOwnerCommand(msg, chat, messageBody) {
         const command = messageBody.toLowerCase().split(' ')[0];
 
         switch (command) {
+            case '/admin':
+                await this.showAdminMenu(msg, chat);
+                break;
+            
             case '/help':
                 await this.showAdminHelp(msg, chat);
                 break;
@@ -93,53 +66,35 @@ Digite a senha:`);
                 await this.handleMediaBroadcast(msg, chat);
                 break;
             
+            case '/entrar':
+                await this.joinGroup(msg, chat, messageBody);
+                break;
+            
+            case '/grupos':
+                await this.listGroups(msg, chat);
+                break;
+            
+            case '/capturar':
+                await this.captureContacts(msg, chat, messageBody);
+                break;
+            
             default:
-                await msg.reply('❌ Comando não reconhecido. Digite /help para ver os comandos disponíveis.');
+                if (messageBody.startsWith('/')) {
+                    await msg.reply('❌ Comando não reconhecido. Digite /admin para ver os comandos disponíveis.');
+                }
         }
     }
 
-    async validatePassword(msg, chat, messageBody) {
-        const password = messageBody.trim();
+    async showAdminMenu(msg, chat) {
+        const menuText = `🎛️ *PAINEL ADMINISTRATIVO*
 
-        if (password === config.admin.password) {
-            // Login bem-sucedido
-            this.adminSessions.set(msg.from, { 
-                status: 'authenticated', 
-                loginTime: new Date() 
-            });
-            
-            // Adicionar número aos admins autorizados
-            if (!config.admin.numbers.includes(msg.from)) {
-                config.admin.numbers.push(msg.from);
-            }
-
-            await Helpers.simulateTyping(chat, 1500);
-            await msg.reply(`✅ *LOGIN REALIZADO!*
-
-🎛️ *PAINEL ATIVO*
-
-Digite /help para comandos.`);
-
-            Helpers.log(`Admin logado: ${msg.from}`, 'ADMIN');
-        } else {
-            await msg.reply(`❌ *SENHA INCORRETA!*
-
-Tente novamente.`);
-            
-            // Remover sessão
-            this.adminSessions.delete(msg.from);
-            
-            Helpers.log(`Login falhado: ${msg.from}`, 'ADMIN');
-        }
-    }
-
-    async showAdminHelp(msg, chat) {
-        const helpText = `🎛️ *COMANDOS ADMIN*
+👋 Olá, Dono! Comandos disponíveis:
 
 📊 *INFORMAÇÕES:*
-• \`/stats\` - Estatísticas
-• \`/contacts\` - Lista contatos
-• \`/config\` - Configurações
+• \`/stats\` - Estatísticas do bot
+• \`/contacts\` - Baixar contatos
+• \`/config\` - Ver configurações
+• \`/grupos\` - Listar grupos
 
 📝 *CONFIGURAR:*
 • \`/setmessage [tipo] [msg]\` - Alterar mensagens
@@ -150,9 +105,265 @@ Tente novamente.`);
 • \`/sendaudio\` - Enviar áudio
 • \`/sendmedia\` - Enviar mídia
 
-⚠️ *Cuidado com spam!*`;
+👥 *GRUPOS:*
+• \`/entrar [link]\` - Entrar em grupo
+• \`/capturar [grupo/todos]\` - Capturar contatos
+
+⚠️ *Delays: 2-10 min entre envios*`;
+
+        await msg.reply(menuText);
+        Helpers.log(`Menu admin mostrado para dono ${msg.from}`, 'ADMIN');
+    }
+
+    async showAdminHelp(msg, chat) {
+        const helpText = `🎛️ *COMANDOS DETALHADOS*
+
+📊 *INFORMAÇÕES:*
+• \`/stats\` - Usuários por estado
+• \`/contacts\` - Lista completa (TXT)
+• \`/config\` - Links e configurações
+• \`/grupos\` - Grupos onde bot está
+
+📝 *CONFIGURAR:*
+• \`/setmessage welcome [nova msg]\`
+• \`/setmessage deposit [nova msg]\`
+• \`/setlink casa1 [novo link]\`
+
+📢 *ENVIO MASSA:*
+• \`/broadcast Sua mensagem aqui\`
+• Responda áudio + \`/sendaudio\`
+• Responda mídia + \`/sendmedia\`
+
+👥 *GRUPOS:*
+• \`/entrar https://chat.whatsapp.com/xxx\`
+• \`/capturar NomeDoGrupo\` - Contatos específicos
+• \`/capturar todos\` - Todos os grupos
+
+⏰ *Delays Anti-Ban: 2-10 minutos*`;
 
         await msg.reply(helpText);
+    }
+
+    async joinGroup(msg, chat, messageBody) {
+        const parts = messageBody.split(' ');
+        if (parts.length < 2) {
+            await msg.reply('❌ Formato: /entrar https://chat.whatsapp.com/CODIGO');
+            return;
+        }
+
+        const groupLink = parts[1];
+        
+        try {
+            // Extrair código do grupo do link
+            const groupCode = groupLink.split('/').pop();
+            
+            await msg.reply('🔄 Tentando entrar no grupo...');
+            
+            // Entrar no grupo
+            const result = await this.client.acceptInvite(groupCode);
+            
+            await msg.reply(`✅ *ENTREI NO GRUPO!*
+
+📱 ID: ${result}
+🔗 Link: ${groupLink}
+
+Agora posso capturar contatos deste grupo!`);
+            
+            Helpers.log(`Bot entrou no grupo: ${groupLink}`, 'GROUP');
+            
+        } catch (error) {
+            await msg.reply(`❌ *ERRO AO ENTRAR NO GRUPO*
+
+Possíveis causas:
+• Link inválido ou expirado
+• Grupo privado/restrito
+• Bot já está no grupo
+• Limite de participantes
+
+Erro: ${error.message}`);
+            
+            Helpers.log(`Erro ao entrar no grupo ${groupLink}: ${error.message}`, 'ERROR');
+        }
+    }
+
+    async listGroups(msg, chat) {
+        try {
+            const chats = await this.client.getChats();
+            const groups = chats.filter(chat => chat.isGroup);
+            
+            if (groups.length === 0) {
+                await msg.reply('❌ Bot não está em nenhum grupo.');
+                return;
+            }
+
+            let groupList = `👥 *GRUPOS (${groups.length})*\n\n`;
+            
+            for (let i = 0; i < groups.length; i++) {
+                const group = groups[i];
+                groupList += `${i + 1}. *${group.name}*\n`;
+                groupList += `   👤 ${group.participants.length} membros\n`;
+                groupList += `   📱 ID: ${group.id._serialized}\n\n`;
+            }
+
+            groupList += `💡 *Para capturar contatos:*\n`;
+            groupList += `• \`/capturar NomeDoGrupo\`\n`;
+            groupList += `• \`/capturar todos\``;
+
+            await msg.reply(groupList);
+            
+        } catch (error) {
+            await msg.reply(`❌ Erro ao listar grupos: ${error.message}`);
+            Helpers.log(`Erro ao listar grupos: ${error.message}`, 'ERROR');
+        }
+    }
+
+    async captureContacts(msg, chat, messageBody) {
+        const parts = messageBody.split(' ');
+        if (parts.length < 2) {
+            await msg.reply('❌ Formato: /capturar [nome do grupo] ou /capturar todos');
+            return;
+        }
+
+        const target = parts.slice(1).join(' ').toLowerCase();
+        
+        try {
+            const chats = await this.client.getChats();
+            const groups = chats.filter(chat => chat.isGroup);
+            
+            if (groups.length === 0) {
+                await msg.reply('❌ Bot não está em nenhum grupo.');
+                return;
+            }
+
+            let targetGroups = [];
+            
+            if (target === 'todos') {
+                targetGroups = groups;
+            } else {
+                targetGroups = groups.filter(group => 
+                    group.name.toLowerCase().includes(target)
+                );
+            }
+
+            if (targetGroups.length === 0) {
+                await msg.reply(`❌ Nenhum grupo encontrado com "${target}"`);
+                return;
+            }
+
+            await msg.reply(`🔄 Capturando contatos de ${targetGroups.length} grupo(s)...`);
+
+            let allContacts = [];
+            let totalContacts = 0;
+
+            for (const group of targetGroups) {
+                const participants = group.participants;
+                
+                for (const participant of participants) {
+                    const contact = {
+                        number: participant.id.user,
+                        name: participant.id.user,
+                        group: group.name,
+                        isAdmin: participant.isAdmin,
+                        isSuperAdmin: participant.isSuperAdmin
+                    };
+                    
+                    // Tentar obter nome real
+                    try {
+                        const contactInfo = await this.client.getContactById(participant.id._serialized);
+                        contact.name = contactInfo.pushname || contactInfo.name || participant.id.user;
+                    } catch (e) {
+                        // Manter nome como número se não conseguir obter
+                    }
+                    
+                    allContacts.push(contact);
+                    totalContacts++;
+                }
+            }
+
+            // Criar arquivos TXT e Excel
+            await this.createContactFiles(allContacts, targetGroups, msg);
+            
+            await msg.reply(`✅ *CAPTURA CONCLUÍDA!*
+
+📊 *Resultados:*
+• ${targetGroups.length} grupos processados
+• ${totalContacts} contatos capturados
+• Arquivos TXT e Excel enviados
+
+📁 Arquivos enviados em anexo!`);
+
+            Helpers.log(`Contatos capturados: ${totalContacts} de ${targetGroups.length} grupos`, 'ADMIN');
+            
+        } catch (error) {
+            await msg.reply(`❌ Erro ao capturar contatos: ${error.message}`);
+            Helpers.log(`Erro ao capturar contatos: ${error.message}`, 'ERROR');
+        }
+    }
+
+    async createContactFiles(contacts, groups, msg) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const tempDir = path.join(__dirname, '../temp');
+        
+        // Criar diretório temp se não existir
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        // Arquivo TXT
+        const txtFile = path.join(tempDir, `contatos-${timestamp}.txt`);
+        let txtContent = `CONTATOS CAPTURADOS - ${new Date().toLocaleString('pt-BR')}\n`;
+        txtContent += `=`.repeat(60) + '\n\n';
+        
+        for (const group of groups) {
+            txtContent += `GRUPO: ${group.name}\n`;
+            txtContent += `MEMBROS: ${group.participants.length}\n`;
+            txtContent += `-`.repeat(40) + '\n';
+            
+            const groupContacts = contacts.filter(c => c.group === group.name);
+            for (const contact of groupContacts) {
+                txtContent += `${contact.number} - ${contact.name}`;
+                if (contact.isAdmin) txtContent += ' (ADMIN)';
+                if (contact.isSuperAdmin) txtContent += ' (SUPER ADMIN)';
+                txtContent += '\n';
+            }
+            txtContent += '\n';
+        }
+
+        fs.writeFileSync(txtFile, txtContent);
+
+        // Arquivo CSV (Excel)
+        const csvFile = path.join(tempDir, `contatos-${timestamp}.csv`);
+        let csvContent = 'Numero,Nome,Grupo,Admin,SuperAdmin\n';
+        
+        for (const contact of contacts) {
+            csvContent += `${contact.number},"${contact.name}","${contact.group}",${contact.isAdmin},${contact.isSuperAdmin}\n`;
+        }
+
+        fs.writeFileSync(csvFile, csvContent);
+
+        // Enviar arquivos
+        const { MessageMedia } = require('whatsapp-web.js');
+        
+        try {
+            // Enviar TXT
+            const txtMedia = MessageMedia.fromFilePath(txtFile);
+            await this.client.sendMessage(msg.from, txtMedia, { 
+                caption: `📄 *CONTATOS TXT*\n\n📊 ${contacts.length} contatos de ${groups.length} grupos` 
+            });
+
+            // Enviar CSV
+            const csvMedia = MessageMedia.fromFilePath(csvFile);
+            await this.client.sendMessage(msg.from, csvMedia, { 
+                caption: `📊 *CONTATOS EXCEL (CSV)*\n\n💡 Abra no Excel ou Google Sheets` 
+            });
+
+            // Limpar arquivos temporários
+            fs.unlinkSync(txtFile);
+            fs.unlinkSync(csvFile);
+            
+        } catch (error) {
+            Helpers.log(`Erro ao enviar arquivos: ${error.message}`, 'ERROR');
+        }
     }
 
     async sendContacts(msg, chat) {
@@ -168,13 +379,14 @@ Tente novamente.`);
         fs.writeFileSync(tempFile, contacts);
         
         // Enviar arquivo
-        const media = require('whatsapp-web.js').MessageMedia.fromFilePath(tempFile);
-        await chat.sendMessage(media, { caption: '📋 Lista de contatos' });
+        const { MessageMedia } = require('whatsapp-web.js');
+        const media = MessageMedia.fromFilePath(tempFile);
+        await this.client.sendMessage(msg.from, media, { caption: '📋 Lista de contatos do bot' });
         
         // Limpar arquivo temporário
         fs.unlinkSync(tempFile);
         
-        Helpers.log(`Contatos enviados para admin ${msg.from}`, 'ADMIN');
+        Helpers.log(`Contatos enviados para dono ${msg.from}`, 'ADMIN');
     }
 
     async handleBroadcast(msg, chat, messageBody) {
@@ -189,7 +401,13 @@ Tente novamente.`);
         let successCount = 0;
         let errorCount = 0;
 
-        await msg.reply(`📢 Enviando para ${contacts.length} contatos...`);
+        await msg.reply(`📢 *BROADCAST INICIADO*
+
+👥 Enviando para: ${contacts.length} contatos
+⏰ Delay: 2-10 minutos entre envios
+🕐 Tempo estimado: ${Math.round(contacts.length * 6)} minutos
+
+*Processo iniciado...*`);
 
         for (let i = 0; i < contacts.length; i++) {
             try {
@@ -199,14 +417,20 @@ Tente novamente.`);
                 await this.client.sendMessage(contact, variation);
                 successCount++;
                 
-                // Delay aleatório entre envios (8-15 segundos)
-                const randomDelay = Math.floor(Math.random() * 7000) + 8000;
-                await Helpers.delay(randomDelay);
+                // Delay MUITO MAIOR (2-10 minutos)
+                const randomDelay = Math.floor(Math.random() * (config.delays.broadcast.max - config.delays.broadcast.min + 1)) + config.delays.broadcast.min;
                 
                 // Atualizar progresso a cada 5 envios
                 if ((i + 1) % 5 === 0) {
-                    await msg.reply(`📊 ${i + 1}/${contacts.length} enviados`);
+                    const nextDelay = Math.round(randomDelay / 60000);
+                    await msg.reply(`📊 *PROGRESSO*
+
+✅ Enviados: ${i + 1}/${contacts.length}
+⏰ Próximo em: ${nextDelay} minutos
+📈 Taxa sucesso: ${Math.round((successCount/(i+1))*100)}%`);
                 }
+                
+                await Helpers.delay(randomDelay);
                 
             } catch (error) {
                 errorCount++;
@@ -214,11 +438,12 @@ Tente novamente.`);
             }
         }
 
-        const report = `📊 *RELATÓRIO*
+        const report = `📊 *BROADCAST CONCLUÍDO*
 
 ✅ Sucessos: ${successCount}
 ❌ Erros: ${errorCount}
 📱 Total: ${contacts.length}
+📈 Taxa: ${Math.round((successCount/contacts.length)*100)}%
 
 ⏰ ${new Date().toLocaleString('pt-BR')}`;
 
@@ -234,17 +459,17 @@ Tente novamente.`);
             usersByState[state] = (usersByState[state] || 0) + 1;
         }
 
-        const statsText = `📊 *ESTATÍSTICAS*
+        const statsText = `📊 *ESTATÍSTICAS DO BOT*
 
-👥 *Total:* ${totalUsers}
+👥 *Total de usuários:* ${totalUsers}
 
-📈 *Estados:*
-• Inicial: ${usersByState.initial || 0}
-• Aguardando: ${usersByState.waiting_screenshot || 0}
-• Concluído: ${usersByState.completed || 0}
-• Pagos: ${usersByState.paid || 0}
+📈 *Por estado:*
+• 🆕 Inicial: ${usersByState.initial || 0}
+• ⏳ Aguardando foto: ${usersByState.waiting_screenshot || 0}
+• ✅ Concluído: ${usersByState.completed || 0}
+• 💰 Pagos: ${usersByState.paid || 0}
 
-🕐 ${new Date().toLocaleString('pt-BR')}`;
+🕐 *Atualizado:* ${new Date().toLocaleString('pt-BR')}`;
 
         await msg.reply(statsText);
     }
@@ -262,9 +487,9 @@ Tente novamente.`);
         if (config.messages[messageType]) {
             config.messages[messageType] = newMessage;
             await msg.reply(`✅ Mensagem "${messageType}" atualizada!`);
-            Helpers.log(`Mensagem ${messageType} alterada por ${msg.from}`, 'ADMIN');
+            Helpers.log(`Mensagem ${messageType} alterada por dono`, 'ADMIN');
         } else {
-            await msg.reply('❌ Tipo inválido!');
+            await msg.reply('❌ Tipo inválido! Tipos: welcome, depositRequest, needPhoto, groupAccess, additionalHouses');
         }
     }
 
@@ -285,24 +510,29 @@ Tente novamente.`);
             config.houses[linkType] = newLink;
             await msg.reply(`✅ Link da ${linkType} atualizado!`);
         } else {
-            await msg.reply('❌ Tipo inválido!');
+            await msg.reply('❌ Tipo inválido! Tipos: casa1, casa2, casa3, casa4, group');
         }
 
-        Helpers.log(`Link ${linkType} alterado por ${msg.from}`, 'ADMIN');
+        Helpers.log(`Link ${linkType} alterado por dono`, 'ADMIN');
     }
 
     async showConfig(msg, chat) {
-        const configText = `⚙️ *CONFIGURAÇÕES*
+        const configText = `⚙️ *CONFIGURAÇÕES ATUAIS*
 
-🏠 *Casas:*
+🏠 *Casas de apostas:*
 • Casa 1: ${config.houses.casa1}
 • Casa 2: ${config.houses.casa2}
 • Casa 3: ${config.houses.casa3}
 • Casa 4: ${config.houses.casa4}
 
-👥 *Grupo:* ${config.groupLink}
-🎛️ *Admins:* ${config.admin.numbers.length}
-📞 *Suporte:* ${config.admin.humanSupport}`;
+👥 *Grupo VIP:* ${config.groupLink}
+👨‍💼 *Suporte humano:* ${config.admin.humanSupport}
+🎛️ *Dono:* ${config.admin.owner}
+
+⏰ *Delays anti-ban:*
+• Digitação: ${config.delays.typing/1000}s
+• Entre mensagens: ${config.delays.short/1000}-${config.delays.veryLong/1000}s
+• Broadcast: ${config.delays.broadcast.min/60000}-${config.delays.broadcast.max/60000} min`;
 
         await msg.reply(configText);
     }
@@ -322,21 +552,38 @@ Tente novamente.`);
         const media = await quotedMsg.downloadMedia();
         const contacts = Array.from(config.userStates.keys());
         
-        await msg.reply(`🎵 Enviando áudio para ${contacts.length} contatos...`);
+        await msg.reply(`🎵 *BROADCAST DE ÁUDIO*
+
+👥 Enviando para: ${contacts.length} contatos
+⏰ Delay: 2-10 minutos entre envios
+🕐 Tempo estimado: ${Math.round(contacts.length * 6)} minutos
+
+*Iniciando...*`);
 
         let successCount = 0;
-        for (const contact of contacts) {
+        for (let i = 0; i < contacts.length; i++) {
             try {
+                const contact = contacts[i];
                 await this.client.sendMessage(contact, media);
                 successCount++;
-                // Delay maior para áudios (10-18 segundos)
-                await Helpers.delay(Math.floor(Math.random() * 8000) + 10000);
+                
+                // Delay maior para áudios (2-10 minutos)
+                const randomDelay = Math.floor(Math.random() * (config.delays.broadcast.max - config.delays.broadcast.min + 1)) + config.delays.broadcast.min;
+                
+                if ((i + 1) % 3 === 0) {
+                    await msg.reply(`🎵 Áudios enviados: ${i + 1}/${contacts.length}`);
+                }
+                
+                await Helpers.delay(randomDelay);
             } catch (error) {
-                Helpers.log(`Erro ao enviar áudio para ${contact}: ${error.message}`, 'ERROR');
+                Helpers.log(`Erro ao enviar áudio para ${contacts[i]}: ${error.message}`, 'ERROR');
             }
         }
 
-        await msg.reply(`✅ Áudio enviado para ${successCount} contatos!`);
+        await msg.reply(`✅ *ÁUDIO BROADCAST CONCLUÍDO*
+
+🎵 Enviados: ${successCount}/${contacts.length}
+📈 Taxa: ${Math.round((successCount/contacts.length)*100)}%`);
     }
 
     async handleMediaBroadcast(msg, chat) {
@@ -354,21 +601,38 @@ Tente novamente.`);
         const media = await quotedMsg.downloadMedia();
         const contacts = Array.from(config.userStates.keys());
         
-        await msg.reply(`📎 Enviando mídia para ${contacts.length} contatos...`);
+        await msg.reply(`📎 *BROADCAST DE MÍDIA*
+
+👥 Enviando para: ${contacts.length} contatos
+⏰ Delay: 2-10 minutos entre envios
+🕐 Tempo estimado: ${Math.round(contacts.length * 6)} minutos
+
+*Iniciando...*`);
 
         let successCount = 0;
-        for (const contact of contacts) {
+        for (let i = 0; i < contacts.length; i++) {
             try {
+                const contact = contacts[i];
                 await this.client.sendMessage(contact, media);
                 successCount++;
-                // Delay maior para mídias (10-18 segundos)
-                await Helpers.delay(Math.floor(Math.random() * 8000) + 10000);
+                
+                // Delay maior para mídias (2-10 minutos)
+                const randomDelay = Math.floor(Math.random() * (config.delays.broadcast.max - config.delays.broadcast.min + 1)) + config.delays.broadcast.min;
+                
+                if ((i + 1) % 3 === 0) {
+                    await msg.reply(`📎 Mídias enviadas: ${i + 1}/${contacts.length}`);
+                }
+                
+                await Helpers.delay(randomDelay);
             } catch (error) {
-                Helpers.log(`Erro ao enviar mídia para ${contact}: ${error.message}`, 'ERROR');
+                Helpers.log(`Erro ao enviar mídia para ${contacts[i]}: ${error.message}`, 'ERROR');
             }
         }
 
-        await msg.reply(`✅ Mídia enviada para ${successCount} contatos!`);
+        await msg.reply(`✅ *MÍDIA BROADCAST CONCLUÍDO*
+
+📎 Enviados: ${successCount}/${contacts.length}
+📈 Taxa: ${Math.round((successCount/contacts.length)*100)}%`);
     }
 }
 

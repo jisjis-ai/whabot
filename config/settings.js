@@ -2,8 +2,8 @@
 const config = {
     // Dados do Admin
     admin: {
-        password: '006007',
-        numbers: [], // Números autorizados como admin serão adicionados aqui
+        owner: '258876219853', // Número do dono - acesso direto
+        numbers: ['258876219853'], // Números autorizados como admin
         humanSupport: '258876219853' // Número para atendimento humano
     },
     
@@ -89,13 +89,17 @@ Precisa de ajuda? 👇
     // Estados dos usuários
     userStates: new Map(),
 
-    // Delay entre mensagens (aumentados para evitar ban)
+    // Delay entre mensagens (MUITO AUMENTADOS para evitar ban)
     delays: {
-        typing: 3000,      // 3 segundos
-        short: 2000,       // 2 segundos
-        medium: 5000,      // 5 segundos
-        long: 8000,        // 8 segundos
-        veryLong: 12000    // 12 segundos
+        typing: 5000,        // 5 segundos
+        short: 8000,         // 8 segundos
+        medium: 15000,       // 15 segundos
+        long: 25000,         // 25 segundos
+        veryLong: 35000,     // 35 segundos
+        broadcast: {
+            min: 120000,     // 2 minutos mínimo
+            max: 600000      // 10 minutos máximo
+        }
     },
 
     // Palavras-chave para detectar pagamento
@@ -106,7 +110,11 @@ Precisa de ajuda? 👇
         'm-pesa',
         'aguardando ativação',
         'pacote',
-        'mzn'
+        'mzn',
+        'telefone:',
+        'email:',
+        'nome:',
+        'senha:'
     ]
 };
 
