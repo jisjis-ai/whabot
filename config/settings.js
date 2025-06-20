@@ -17,7 +17,7 @@ const config = {
 📋 *COMO FUNCIONAR:*
 1️⃣ Clique no link
 2️⃣ Cadastre-se
-3️⃣ Deposite mínimo 1000 MZN
+3️⃣ Deposite pelomenos 100 MZN
 4️⃣ Envie print do depósito
 
 ⚡ *Após depósito:*
