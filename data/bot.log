@@ -32,3 +32,9 @@
 [2025-06-21T07:34:41.377Z] [ERROR] Unhandled Rejection: Error: Could not find expected browser (chrome) locally. Run `npm install` to download the correct Chromium revision (1045629).
 [2025-06-22T07:20:47.618Z] [SYSTEM] Servidor web iniciado na porta 3000
 [2025-06-22T07:20:47.801Z] [ERROR] Unhandled Rejection: Error: Could not find expected browser (chrome) locally. Run `npm install` to download the correct Chromium revision (1045629).
+[2025-06-22T07:22:21.248Z] [SYSTEM] Servidor web iniciado na porta 3000
+[2025-06-22T07:22:21.528Z] [ERROR] Unhandled Rejection: Error: Could not find expected browser (chrome) locally. Run `npm install` to download the correct Chromium revision (1045629).
+[2025-06-22T07:24:15.856Z] [SYSTEM] Servidor web iniciado na porta 3000
+[2025-06-22T07:24:15.912Z] [ERROR] Unhandled Rejection: Error: Could not find expected browser (chrome) locally. Run `npm install` to download the correct Chromium revision (1045629).
+[2025-06-22T07:25:51.150Z] [SYSTEM] Servidor web iniciado na porta 3000
+[2025-06-22T07:25:51.184Z] [ERROR] Unhandled Rejection: Error: Could not find expected browser (chrome) locally. Run `npm install` to download the correct Chromium revision (1045629).
