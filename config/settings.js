@@ -2,77 +2,74 @@
 const config = {
     // Dados do Admin
     admin: {
-        owner: '258876219853', // Número do dono - acesso direto
-        numbers: ['258876219853'], // Números autorizados como admin
-        humanSupport: '258876219853' // Número para atendimento humano
+        email: 'freefiremaxdojis@gmail.com',
+        password: '006007',
+        numbers: [] // Números autorizados como admin serão adicionados aqui
     },
     
-    // Mensagens do Bot (Curtas e diretas)
+    // Mensagens do Bot
     messages: {
-        welcome: `🎰 *Ganhe dinheiro apostando!* 💰
+        welcome: `🎰 *Olá! Seja muito bem-vindo!* 🎰
 
-🔥 *CADASTRE-SE AGORA:*
+Você chegou no lugar certo para *GANHAR DINHEIRO* com apostas! 💰
+
+🔥 *PRIMEIRA CASA - CADASTRE-SE AGORA:*
 👉 https://receber.netlify.app/register
 
-📋 *COMO FUNCIONAR:*
-1️⃣ Clique no link
-2️⃣ Cadastre-se
-3️⃣ Deposite pelomenos 100 MZN
-4️⃣ Envie print do depósito
+📋 *INSTRUÇÕES:*
+1️⃣ Clique no link acima
+2️⃣ Faça seu cadastro completo
+3️⃣ Deposite qualquer valor (mínimo R$ 20)
+4️⃣ Envie o print do depósito aqui
 
-⚡ *Após depósito:*
-• Grupo VIP 🔐
-• Sinais certeiros 📊
+⚡ *Após o depósito, você receberá:*
+• Acesso ao grupo VIP 🔐
+• Sinais certeiros diários 📊
 • Suporte 24h 🕐
 
-*Vamos lucrar!* 🚀`,
+*Vamos começar a lucrar juntos!* 🚀`,
 
         depositRequest: `💸 *PERFEITO!* 
 
-Envie o *PRINT* do seu depósito para liberar acesso ao grupo VIP! 📸
+Agora preciso que você me envie o *PRINT/SCREENSHOT* do seu depósito para que eu possa verificar e liberar seu acesso ao grupo VIP! 📸
 
-⚠️ *IMPORTANTE:* Apenas a FOTO do comprovante!
+⚠️ *IMPORTANTE:* Envie apenas a FOTO do comprovante, não texto!
 
-Aguardando... ⏰`,
+Estou aguardando... ⏰`,
 
-        needPhoto: `❌ *Envie a FOTO do comprovante!*
+        needPhoto: `❌ *Por favor, envie a FOTO do comprovante!*
 
-Preciso ver o print do depósito! 📸
+Preciso ver o print/screenshot do seu depósito para liberar seu acesso ao grupo VIP! 📸
 
-Não texto, apenas imagem! 🖼️`,
+Não envie texto, apenas a imagem! 🖼️`,
 
         groupAccess: `✅ *DEPÓSITO CONFIRMADO!* 
 
-🎉 Acesso liberado!
+🎉 Parabéns! Seu acesso foi liberado!
 
-🔗 *GRUPO VIP:*
+🔗 *CLIQUE NO LINK ABAIXO PARA ENTRAR NO GRUPO VIP:*
 👉 https://chat.whatsapp.com/BD677joED8ABFOVQXv5kPK
 
-🏆 *Agora você é VIP!*`,
+⚠️ *ATENÇÃO:* Este grupo é EXCLUSIVO para quem depositou! Se não depositou, não será aprovado!
 
-        additionalHouses: `🔥 *MULTIPLIQUE SEUS GANHOS!*
+🏆 *Agora você faz parte da elite dos apostadores!*`,
 
-Cadastre-se em mais casas! 💰
+        additionalHouses: `🔥 *QUER MULTIPLICAR SEUS GANHOS?*
 
-🎯 *CASA 2:* https://olagiro.netlify.app/
-🎯 *CASA 3:* https://megagiro.netlify.app/
-🎯 *CASA 4:* https://sshortly.net/e8c338e
+Cadastre-se também nessas outras casas TOP e aumente suas chances de lucro! 💰
 
-💡 *Mais casas = Mais lucro!*`,
+🎯 *CASA 2 - OLAGIRO:*
+👉 https://olagiro.netlify.app/
 
-        humanSupport: `👨‍💼 *ATENDIMENTO HUMANO*
+🎯 *CASA 3 - MEGAGIRO:*
+👉 https://megagiro.netlify.app/
 
-Você será direcionado para nosso especialista!
+🎯 *CASA 4 - PREMIUM:*
+👉 https://sshortly.net/e8c338e
 
-Aguarde o contato... 📞`,
+💡 *DICA DE OURO:* Quanto mais casas você tiver, mais oportunidades de ganhar! 
 
-        waitingActivation: `⏳ *CONTA EM ATIVAÇÃO*
-
-Seu pagamento foi recebido!
-Aguarde a ativação da conta.
-
-Precisa de ajuda? 👇
-*Falar com Humano* 👨‍💼`
+Faça seus depósitos e me envie os prints! 📸`
     },
 
     // Links das casas
@@ -89,33 +86,13 @@ Precisa de ajuda? 👇
     // Estados dos usuários
     userStates: new Map(),
 
-    // Delay entre mensagens (MUITO AUMENTADOS para evitar ban)
+    // Delay entre mensagens (em ms)
     delays: {
-        typing: 5000,        // 5 segundos
-        short: 8000,         // 8 segundos
-        medium: 15000,       // 15 segundos
-        long: 25000,         // 25 segundos
-        veryLong: 35000,     // 35 segundos
-        broadcast: {
-            min: 120000,     // 2 minutos mínimo
-            max: 600000      // 10 minutos máximo
-        }
-    },
-
-    // Palavras-chave para detectar pagamento
-    paymentKeywords: [
-        'comprovativo de pagamento',
-        'hackerbets',
-        'método',
-        'm-pesa',
-        'aguardando ativação',
-        'pacote',
-        'mzn',
-        'telefone:',
-        'email:',
-        'nome:',
-        'senha:'
-    ]
+        typing: 2000,
+        short: 1000,
+        medium: 3000,
+        long: 5000
+    }
 };
 
 module.exports = config;
