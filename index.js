@@ -15,8 +15,6 @@ const PORT = process.env.PORT || 3000;
 let currentQRCode = null;
 let qrExpireTime = null;
 let botStatus = 'Iniciando...';
-let reconnectAttempts = 0;
-const maxReconnectAttempts = 3;
 
 // Configuração do cliente WhatsApp otimizada para Railway
 const client = new Client({
@@ -33,10 +31,7 @@ const client = new Client({
             '--disable-gpu',
             '--disable-web-security',
             '--disable-features=VizDisplayCompositor',
-            '--memory-pressure-off',
-            '--disable-background-timer-throttling',
-            '--disable-backgrounding-occluded-windows',
-            '--disable-renderer-backgrounding'
+            '--memory-pressure-off'
         ],
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
     }
@@ -200,14 +195,6 @@ app.get('/', (req, res) => {
                 margin-bottom: 10px;
             }
             
-            .reconnect-info {
-                background: rgba(255, 193, 7, 0.2);
-                border-radius: 10px;
-                padding: 15px;
-                margin-top: 20px;
-                border-left: 4px solid #FFC107;
-            }
-            
             @media (max-width: 600px) {
                 .container {
                     padding: 20px;
@@ -231,13 +218,6 @@ app.get('/', (req, res) => {
             <div class="status ${getStatusClass()}" id="status">
                 📱 ${botStatus}
             </div>
-            
-            ${reconnectAttempts > 0 ? `
-                <div class="reconnect-info">
-                    🔄 <strong>Tentativas de reconexão:</strong> ${reconnectAttempts}/${maxReconnectAttempts}
-                    <br>⚠️ Sistema anti-queda ativo
-                </div>
-            ` : ''}
             
             ${currentQRCode ? `
                 <div class="qr-container">
@@ -265,7 +245,6 @@ app.get('/', (req, res) => {
                 <p><strong>Dono:</strong> 258876219853</p>
                 <p><strong>Comando:</strong> /admin</p>
                 <p><strong>Delays:</strong> 2-10 min entre envios</p>
-                <p><strong>Anti-Ban:</strong> Sistema avançado ativo</p>
             </div>
             
             <button class="refresh-btn" onclick="location.reload()">
@@ -317,9 +296,7 @@ app.get('/api/status', (req, res) => {
         qrCode: currentQRCode,
         expireTime: qrExpireTime,
         connected: botStatus.includes('Conectado'),
-        owner: config.admin.owner,
-        reconnectAttempts: reconnectAttempts,
-        maxReconnectAttempts: maxReconnectAttempts
+        owner: config.admin.owner
     });
 });
 
@@ -364,7 +341,6 @@ client.on('qr', async qr => {
         console.log('\n📱 QR Code disponível na página web!');
         console.log('⏰ Válido por 20 segundos');
         console.log(`🎛️ Dono: ${config.admin.owner}`);
-        console.log(`🔄 Tentativas de reconexão: ${reconnectAttempts}/${maxReconnectAttempts}`);
         console.log('='.repeat(60) + '\n');
         
         // QR Code no terminal também (menor)
@@ -399,7 +375,6 @@ client.on('ready', () => {
     qrGenerated = true;
     isConnecting = false;
     currentQRCode = null;
-    reconnectAttempts = 0; // Reset contador de reconexão
     botStatus = '✅ Bot conectado e funcionando!';
     
     console.clear();
@@ -408,7 +383,6 @@ client.on('ready', () => {
     console.log('🤖 Sistema de casa de apostas ATIVO');
     console.log('👨‍💼 Sistema administrativo DISPONÍVEL');
     console.log('🚀 Pronto para receber clientes!');
-    console.log('🛡️ Sistema anti-ban ATIVO');
     console.log('🎉'.repeat(20) + '\n');
     
     // Informações do bot
@@ -420,43 +394,29 @@ client.on('ready', () => {
     console.log(`🎛️ DONO: ${config.admin.owner}`);
     console.log('💡 Para acessar admin, envie: /admin');
     console.log('⏰ Delays: 2-10 minutos entre envios');
-    console.log('🛡️ Cooldown: 60s entre respostas');
     console.log('='.repeat(50) + '\n');
     
     Helpers.log('Bot conectado com sucesso na Railway', 'SYSTEM');
 });
 
-// Evento de desconexão - Melhorado
+// Evento de desconexão
 client.on('disconnected', (reason) => {
     console.log('\n❌ BOT DESCONECTADO:', reason);
+    console.log('🔄 Tentando reconectar...\n');
     
     qrGenerated = false;
     isConnecting = false;
     currentQRCode = null;
+    botStatus = '🔄 Reconectando...';
     
-    // Verificar se deve tentar reconectar
-    if (reconnectAttempts < maxReconnectAttempts) {
-        reconnectAttempts++;
-        botStatus = `🔄 Reconectando... (${reconnectAttempts}/${maxReconnectAttempts})`;
-        
-        console.log(`🔄 Tentativa de reconexão ${reconnectAttempts}/${maxReconnectAttempts}...`);
-        
-        Helpers.log(`Bot desconectado: ${reason} - Tentativa ${reconnectAttempts}`, 'SYSTEM');
-        
-        // Tentar reconectar após delay progressivo
-        const reconnectDelay = reconnectAttempts * 10000; // 10s, 20s, 30s
-        setTimeout(() => {
-            console.log('🔄 Reiniciando cliente...');
-            botStatus = '🔄 Reiniciando cliente...';
-            client.initialize();
-        }, reconnectDelay);
-    } else {
-        botStatus = '❌ Máximo de tentativas de reconexão atingido';
-        console.log('❌ Máximo de tentativas de reconexão atingido.');
-        console.log('🔄 Reinicie manualmente o bot.');
-        
-        Helpers.log(`Bot desconectado permanentemente após ${maxReconnectAttempts} tentativas`, 'ERROR');
-    }
+    Helpers.log(`Bot desconectado: ${reason}`, 'SYSTEM');
+    
+    // Tentar reconectar após 5 segundos
+    setTimeout(() => {
+        console.log('🔄 Reiniciando cliente...');
+        botStatus = '🔄 Reiniciando cliente...';
+        client.initialize();
+    }, 5000);
 });
 
 // Evento de erro de autenticação
@@ -483,7 +443,7 @@ client.on('loading_screen', (percent, message) => {
     }
 });
 
-// Handler principal de mensagens - Melhorado
+// Handler principal de mensagens
 client.on('message', async msg => {
     try {
         // Ignorar mensagens de grupos e status
@@ -493,13 +453,6 @@ client.on('message', async msg => {
 
         // Ignorar mensagens próprias
         if (msg.fromMe) {
-            return;
-        }
-
-        // Ignorar mensagens muito antigas (mais de 5 minutos)
-        const messageAge = Date.now() - (msg.timestamp * 1000);
-        if (messageAge > 300000) { // 5 minutos
-            Helpers.log(`Mensagem antiga ignorada de ${msg.from}`, 'OLD_MESSAGE');
             return;
         }
 
@@ -526,19 +479,77 @@ client.on('message', async msg => {
     }
 });
 
-// Tratamento de erros não capturados - Melhorado
+// Evento para capturar novos grupos
+client.on('group_join', async (notification) => {
+    try {
+        const chat = await notification.getChat();
+        Helpers.log(`Bot adicionado ao grupo: ${chat.name} (${chat.id._serialized})`, 'GROUP');
+        
+        // Notificar o dono
+        const ownerMessage = `👥 *BOT ADICIONADO AO GRUPO*
+
+📱 *Grupo:* ${chat.name}
+👤 *Membros:* ${chat.participants.length}
+🆔 *ID:* ${chat.id._serialized}
+⏰ *Horário:* ${new Date().toLocaleString('pt-BR')}
+
+💡 Use \`/capturar ${chat.name}\` para capturar contatos!`;
+
+        await client.sendMessage(config.admin.owner + '@c.us', ownerMessage);
+        
+    } catch (error) {
+        Helpers.log(`Erro ao processar entrada em grupo: ${error.message}`, 'ERROR');
+    }
+});
+
+// Função para enviar mensagem em grupos específicos
+async function sendToGroup(groupId, message) {
+    try {
+        await client.sendMessage(groupId, message);
+        Helpers.log(`Mensagem enviada para grupo ${groupId}`, 'GROUP');
+        return true;
+    } catch (error) {
+        Helpers.log(`Erro ao enviar para grupo ${groupId}: ${error.message}`, 'ERROR');
+        return false;
+    }
+}
+
+// Função para obter lista de grupos onde o bot é admin
+async function getAdminGroups() {
+    try {
+        const chats = await client.getChats();
+        const groups = chats.filter(chat => chat.isGroup);
+        const adminGroups = [];
+
+        for (const group of groups) {
+            const participants = group.participants;
+            const botParticipant = participants.find(p => p.id._serialized === client.info.wid._serialized);
+            
+            if (botParticipant && botParticipant.isAdmin) {
+                adminGroups.push({
+                    id: group.id._serialized,
+                    name: group.name,
+                    participantCount: participants.length
+                });
+            }
+        }
+
+        return adminGroups;
+    } catch (error) {
+        Helpers.log(`Erro ao obter grupos admin: ${error.message}`, 'ERROR');
+        return [];
+    }
+}
+
+// Tratamento de erros não capturados
 process.on('unhandledRejection', (reason, promise) => {
     console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
     Helpers.log(`Unhandled Rejection: ${reason}`, 'ERROR');
-    
-    // Não encerrar o processo, apenas logar
 });
 
 process.on('uncaughtException', (error) => {
     console.error('❌ Uncaught Exception:', error);
     Helpers.log(`Uncaught Exception: ${error.message}`, 'ERROR');
-    
-    // Tentar continuar funcionando
 });
 
 // Graceful shutdown
@@ -559,7 +570,6 @@ console.log('\n🚀 INICIANDO BOT WHATSAPP NA RAILWAY...');
 console.log('📡 Conectando ao WhatsApp Web...');
 console.log('🌐 Servidor web iniciando...');
 console.log(`🎛️ Dono: ${config.admin.owner}`);
-console.log('🛡️ Sistema anti-ban ativo');
 console.log('⏳ Aguarde o QR Code...\n');
 
 botStatus = '🚀 Iniciando bot...';
@@ -568,5 +578,7 @@ client.initialize();
 // Exportar funções para uso externo
 module.exports = {
     client,
+    sendToGroup,
+    getAdminGroups,
     config
 };
