@@ -7,6 +7,20 @@ const config = {
         numbers: [] // Números autorizados como admin serão adicionados aqui
     },
     
+    // Configurações de grupos
+    groupSettings: {
+        autoResponder: false, // Auto responder em grupos
+        autoJoin: false, // Auto entrar em grupos
+        targetGroupCount: 0, // Número de grupos para entrar
+        joinedCount: 0, // Contador de grupos que conseguiu entrar
+        responseDelay: {
+            min: 30000, // 30 segundos mínimo
+            max: 120000 // 2 minutos máximo
+        },
+        lastResponse: new Map(), // Controle de última resposta por grupo
+        cooldownTime: 300000 // 5 minutos de cooldown por grupo
+    },
+    
     // Mensagens do Bot
     messages: {
         welcome: `🎰 *Olá! Seja muito bem-vindo!* 🎰
@@ -69,7 +83,55 @@ Cadastre-se também nessas outras casas TOP e aumente suas chances de lucro! �
 
 💡 *DICA DE OURO:* Quanto mais casas você tiver, mais oportunidades de ganhar! 
 
-Faça seus depósitos e me envie os prints! 📸`
+Faça seus depósitos e me envie os prints! 📸`,
+
+        // Mensagens para grupos (variações)
+        groupMessages: [
+            `🎰 *OPORTUNIDADE ÚNICA!* 🎰
+
+💰 *GANHE DINHEIRO COM APOSTAS CERTEIRAS!*
+
+🔥 Cadastre-se agora e comece a lucrar:
+👉 https://receber.netlify.app/register
+
+⚡ *Primeiros 100 cadastros ganham BÔNUS ESPECIAL!*`,
+
+            `🚀 *ÚLTIMA CHANCE DE LUCRAR HOJE!* 🚀
+
+💎 *SINAIS VIP LIBERADOS AGORA!*
+
+🎯 Entre na casa que mais paga:
+👉 https://receber.netlify.app/register
+
+🔥 *Não perca essa oportunidade de ouro!*`,
+
+            `💰 *ATENÇÃO APOSTADORES!* 💰
+
+⚡ *CASA COM MAIOR TAXA DE ACERTO!*
+
+🏆 Cadastre-se e receba sinais certeiros:
+👉 https://receber.netlify.app/register
+
+🎰 *Transforme R$ 20 em R$ 500 hoje mesmo!*`,
+
+            `🎯 *ALERTA DE OPORTUNIDADE!* 🎯
+
+🔥 *MÉTODO SECRETO REVELADO!*
+
+💎 Acesse a casa dos campeões:
+👉 https://receber.netlify.app/register
+
+⚡ *Lucros garantidos para quem agir rápido!*`,
+
+            `🌟 *BREAKING NEWS!* 🌟
+
+💰 *NOVA ESTRATÉGIA 100% CERTEIRA!*
+
+🚀 Entre na casa mais confiável:
+👉 https://receber.netlify.app/register
+
+🎰 *Seus lucros começam AGORA!*`
+        ]
     },
 
     // Links das casas

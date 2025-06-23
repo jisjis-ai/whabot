@@ -5,6 +5,7 @@ const { Client, MessageMedia } = require('whatsapp-web.js');
 const config = require('./config/settings');
 const UserHandler = require('./handlers/userHandler');
 const AdminHandler = require('./handlers/adminHandler');
+const GroupHandler = require('./handlers/groupHandler');
 const Helpers = require('./utils/helpers');
 
 // Criar servidor Express
@@ -40,6 +41,7 @@ const client = new Client({
 // Inicializar handlers
 const userHandler = new UserHandler(client);
 const adminHandler = new AdminHandler(client);
+const groupHandler = new GroupHandler(client);
 
 // Variável para controlar QR Code
 let qrGenerated = false;
@@ -200,7 +202,7 @@ app.get('/', (req, res) => {
     <body>
         <div class="container">
             <div class="title">🤖 Bot WhatsApp</div>
-            <div class="subtitle">Casa de Apostas</div>
+            <div class="subtitle">Casa de Apostas Avançado</div>
             
             <div class="status ${getStatusClass()}" id="status">
                 📱 ${botStatus}
@@ -313,7 +315,7 @@ client.on('qr', async qr => {
         
         console.clear();
         console.log('\n' + '='.repeat(60));
-        console.log('🤖 BOT WHATSAPP - CASA DE APOSTAS');
+        console.log('🤖 BOT WHATSAPP - CASA DE APOSTAS AVANÇADO');
         console.log('='.repeat(60));
         console.log('\n🌐 ACESSE A URL PARA ESCANEAR O QR CODE:');
         console.log(`🔗 https://seu-projeto.railway.app`);
@@ -358,8 +360,9 @@ client.on('ready', () => {
     console.clear();
     console.log('\n' + '🎉'.repeat(20));
     console.log('✅ BOT WHATSAPP CONECTADO COM SUCESSO!');
-    console.log('🤖 Sistema de casa de apostas ATIVO');
+    console.log('🤖 Sistema avançado de casa de apostas ATIVO');
     console.log('👨‍💼 Sistema administrativo DISPONÍVEL');
+    console.log('👥 Sistema de grupos ATIVO');
     console.log('🚀 Pronto para receber clientes!');
     console.log('🎉'.repeat(20) + '\n');
     
@@ -424,8 +427,8 @@ client.on('loading_screen', (percent, message) => {
 // Handler principal de mensagens
 client.on('message', async msg => {
     try {
-        // Ignorar mensagens de grupos e status
-        if (msg.from.includes('@g.us') || msg.from.includes('status@broadcast')) {
+        // Ignorar mensagens de status
+        if (msg.from.includes('status@broadcast')) {
             return;
         }
 
@@ -436,6 +439,13 @@ client.on('message', async msg => {
 
         const messageBody = msg.body.trim();
         
+        // Verificar se é mensagem de grupo
+        if (msg.from.includes('@g.us')) {
+            // Processar auto-resposta em grupos
+            await groupHandler.handleGroupMessage(msg);
+            return;
+        }
+
         // Verificar se é comando de admin
         if (messageBody.startsWith('/admin') || config.admin.numbers.includes(msg.from)) {
             await adminHandler.handleAdminMessage(msg);
@@ -467,45 +477,6 @@ client.on('group_join', async (notification) => {
     }
 });
 
-// Função para enviar mensagem em grupos específicos
-async function sendToGroup(groupId, message) {
-    try {
-        await client.sendMessage(groupId, message);
-        Helpers.log(`Mensagem enviada para grupo ${groupId}`, 'GROUP');
-        return true;
-    } catch (error) {
-        Helpers.log(`Erro ao enviar para grupo ${groupId}: ${error.message}`, 'ERROR');
-        return false;
-    }
-}
-
-// Função para obter lista de grupos onde o bot é admin
-async function getAdminGroups() {
-    try {
-        const chats = await client.getChats();
-        const groups = chats.filter(chat => chat.isGroup);
-        const adminGroups = [];
-
-        for (const group of groups) {
-            const participants = group.participants;
-            const botParticipant = participants.find(p => p.id._serialized === client.info.wid._serialized);
-            
-            if (botParticipant && botParticipant.isAdmin) {
-                adminGroups.push({
-                    id: group.id._serialized,
-                    name: group.name,
-                    participantCount: participants.length
-                });
-            }
-        }
-
-        return adminGroups;
-    } catch (error) {
-        Helpers.log(`Erro ao obter grupos admin: ${error.message}`, 'ERROR');
-        return [];
-    }
-}
-
 // Tratamento de erros não capturados
 process.on('unhandledRejection', (reason, promise) => {
     console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
@@ -531,18 +502,18 @@ process.on('SIGINT', () => {
 });
 
 // Inicializar o bot
-console.log('\n🚀 INICIANDO BOT WHATSAPP NA RAILWAY...');
+console.log('\n🚀 INICIANDO BOT WHATSAPP AVANÇADO NA RAILWAY...');
 console.log('📡 Conectando ao WhatsApp Web...');
 console.log('🌐 Servidor web iniciando...');
+console.log('👥 Sistema de grupos ativo...');
 console.log('⏳ Aguarde o QR Code...\n');
 
-botStatus = '🚀 Iniciando bot...';
+botStatus = '🚀 Iniciando bot avançado...';
 client.initialize();
 
 // Exportar funções para uso externo
 module.exports = {
     client,
-    sendToGroup,
-    getAdminGroups,
-    config
+    config,
+    groupHandler
 };

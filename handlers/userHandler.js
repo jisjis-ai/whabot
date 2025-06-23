@@ -49,21 +49,15 @@ class UserHandler {
         await Helpers.simulateTyping(chat, config.delays.medium);
         await msg.reply(config.messages.welcome);
         
-        await Helpers.delay(config.delays.short);
-        await Helpers.simulateTyping(chat, config.delays.short);
-        await this.client.sendMessage(msg.from, config.messages.depositRequest);
-        
-        // Atualizar estado do usuário
+        // Atualizar estado do usuário para aguardar screenshot diretamente
         config.userStates.set(msg.from, 'waiting_screenshot');
         
         Helpers.log(`Mensagem de boas-vindas enviada para ${msg.from}`, 'BOT');
     }
 
     async handleDepositResponse(msg, chat) {
-        await Helpers.simulateTyping(chat, config.delays.short);
-        await msg.reply(config.messages.depositRequest);
-        
-        config.userStates.set(msg.from, 'waiting_screenshot');
+        // Redirecionar para aguardar screenshot
+        await this.handleScreenshotResponse(msg, chat);
     }
 
     async handleScreenshotResponse(msg, chat) {

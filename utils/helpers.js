@@ -48,6 +48,19 @@ class Helpers {
         fs.appendFileSync(contactsFile, contactInfo);
     }
 
+    // Salvar contatos de grupos (apenas números)
+    static saveGroupContacts(contacts, filename) {
+        const contactsFile = path.join(__dirname, '../data/', filename);
+        
+        // Criar diretório se não existir
+        const dir = path.dirname(contactsFile);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        
+        fs.writeFileSync(contactsFile, contacts);
+    }
+
     // Ler todos os contatos
     static getContacts() {
         const contactsFile = path.join(__dirname, '../data/contacts.txt');
@@ -70,6 +83,21 @@ class Helpers {
     // Formatar número de telefone
     static formatPhoneNumber(number) {
         return number.replace(/\D/g, '');
+    }
+
+    // Extrair apenas números de telefone
+    static extractPhoneNumbers(text) {
+        const numbers = [];
+        const lines = text.split('\n');
+        
+        for (const line of lines) {
+            const match = line.match(/(\d{10,15})/);
+            if (match) {
+                numbers.push(match[1]);
+            }
+        }
+        
+        return numbers;
     }
 
     // Log de atividades

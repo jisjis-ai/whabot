@@ -1,5 +1,6 @@
 const config = require('../config/settings');
 const Helpers = require('../utils/helpers');
+const GroupHandler = require('./groupHandler');
 const fs = require('fs');
 const path = require('path');
 
@@ -7,6 +8,7 @@ class AdminHandler {
     constructor(client) {
         this.client = client;
         this.adminSessions = new Map(); // Sessões de admin logados
+        this.groupHandler = new GroupHandler(client);
     }
 
     async handleAdminMessage(msg) {
@@ -98,6 +100,27 @@ Senha: suasenha
             case '/sendmedia':
                 await this.handleMediaBroadcast(msg, chat);
                 break;
+
+            // Novos comandos de grupos
+            case '/autoresponder':
+                await this.toggleAutoResponder(msg, chat, messageBody);
+                break;
+
+            case '/capturarcontatos':
+                await this.captureGroupContacts(msg, chat);
+                break;
+
+            case '/mensagemgrupos':
+                await this.broadcastToGroups(msg, chat, messageBody);
+                break;
+
+            case '/entrargrupos':
+                await this.joinRandomGroups(msg, chat, messageBody);
+                break;
+
+            case '/statsgrupos':
+                await this.showGroupStats(msg, chat);
+                break;
             
             default:
                 await msg.reply('❌ Comando não reconhecido. Digite /help para ver os comandos disponíveis.');
@@ -163,6 +186,7 @@ Senha: suasenha
 • \`/stats\` - Estatísticas do bot
 • \`/contacts\` - Baixar lista de contatos
 • \`/config\` - Ver configurações atuais
+• \`/statsgrupos\` - Estatísticas de grupos
 
 📝 *CONFIGURAÇÕES:*
 • \`/setmessage [tipo] [mensagem]\` - Alterar mensagens
@@ -173,10 +197,16 @@ Senha: suasenha
 • \`/sendaudio\` - Enviar áudio (responda um áudio)
 • \`/sendmedia\` - Enviar mídia (responda uma mídia)
 
+👥 *COMANDOS DE GRUPOS:*
+• \`/autoresponder on/off\` - Ativar/desativar auto-resposta
+• \`/capturarcontatos\` - Capturar contatos de todos os grupos
+• \`/mensagemgrupos [mensagem]\` - Enviar para todos os grupos
+• \`/entrargrupos [número]\` - Entrar em grupos aleatórios
+
 💡 *EXEMPLOS:*
-\`/setmessage welcome Nova mensagem de boas-vindas\`
-\`/setlink casa1 https://novolink.com\`
-\`/broadcast Promoção especial hoje!\`
+\`/autoresponder on\` - Ativa auto-resposta em grupos
+\`/entrargrupos 50\` - Tenta entrar em 50 grupos
+\`/mensagemgrupos Promoção especial!\` - Envia para todos os grupos
 
 ⚠️ *Cuidado com envios em massa para evitar banimento!*`;
 
@@ -331,6 +361,8 @@ Senha: suasenha
 👥 *Grupo VIP:*
 ${config.groupLink}
 
+🤖 *Auto-resposta grupos:* ${config.groupSettings.autoResponder ? '✅ ATIVA' : '❌ INATIVA'}
+
 🎛️ *Admins ativos:* ${config.admin.numbers.length}`;
 
         await msg.reply(configText);
@@ -396,6 +428,151 @@ ${config.groupLink}
         }
 
         await msg.reply(`✅ Mídia enviada para ${successCount} contatos!`);
+    }
+
+    // Novos métodos para grupos
+
+    async toggleAutoResponder(msg, chat, messageBody) {
+        const parts = messageBody.split(' ');
+        if (parts.length < 2) {
+            await msg.reply('❌ Formato: /autoresponder on/off');
+            return;
+        }
+
+        const action = parts[1].toLowerCase();
+        
+        if (action === 'on') {
+            config.groupSettings.autoResponder = true;
+            await msg.reply(`✅ *AUTO-RESPOSTA EM GRUPOS ATIVADA!*
+
+🤖 O bot agora responderá automaticamente em grupos com:
+• Delay de 30s a 2min entre respostas
+• Cooldown de 5min por grupo
+• Mensagens variadas com links de cadastro
+
+⚠️ *CUIDADO:* Use com moderação para evitar banimento!`);
+        } else if (action === 'off') {
+            config.groupSettings.autoResponder = false;
+            await msg.reply('❌ Auto-resposta em grupos DESATIVADA!');
+        } else {
+            await msg.reply('❌ Use: /autoresponder on ou /autoresponder off');
+            return;
+        }
+
+        Helpers.log(`Auto-resposta grupos ${action} por admin ${msg.from}`, 'ADMIN');
+    }
+
+    async captureGroupContacts(msg, chat) {
+        await msg.reply('🔄 Iniciando captura de contatos de todos os grupos...\n⏰ Isso pode levar alguns minutos...');
+
+        const result = await this.groupHandler.captureAllGroupContacts();
+
+        if (result.success) {
+            await msg.reply(result.message);
+
+            // Enviar arquivo com contatos
+            const tempFile = path.join(__dirname, '../temp/', result.filename);
+            const dir = path.dirname(tempFile);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+
+            fs.writeFileSync(tempFile, result.contacts);
+
+            const media = require('whatsapp-web.js').MessageMedia.fromFilePath(tempFile);
+            await chat.sendMessage(media, { 
+                caption: `📋 *CONTATOS CAPTURADOS DOS GRUPOS*\n\n${result.message}` 
+            });
+
+            // Limpar arquivo temporário
+            fs.unlinkSync(tempFile);
+        } else {
+            await msg.reply(result.message);
+        }
+    }
+
+    async broadcastToGroups(msg, chat, messageBody) {
+        const message = messageBody.replace('/mensagemgrupos', '').trim();
+        
+        if (!message) {
+            await msg.reply('❌ Digite a mensagem após o comando /mensagemgrupos');
+            return;
+        }
+
+        await msg.reply('📢 Iniciando envio para todos os grupos...');
+
+        const result = await this.groupHandler.broadcastToGroups(message);
+
+        if (result.success) {
+            const report = `📊 *RELATÓRIO DE ENVIO PARA GRUPOS*
+
+✅ Enviados com sucesso: ${result.sent}
+❌ Erros: ${result.errors}
+👥 Total de grupos: ${result.total}
+
+⏰ Concluído em: ${new Date().toLocaleString('pt-BR')}`;
+
+            await msg.reply(report);
+        } else {
+            await msg.reply(`❌ Erro no envio: ${result.message}`);
+        }
+    }
+
+    async joinRandomGroups(msg, chat, messageBody) {
+        const parts = messageBody.split(' ');
+        if (parts.length < 2) {
+            await msg.reply('❌ Formato: /entrargrupos [número]\n\nExemplo: /entrargrupos 50');
+            return;
+        }
+
+        const targetCount = parseInt(parts[1]);
+        if (isNaN(targetCount) || targetCount < 1 || targetCount > 100) {
+            await msg.reply('❌ Número deve ser entre 1 e 100');
+            return;
+        }
+
+        await msg.reply(`🔄 Iniciando processo para entrar em ${targetCount} grupos...\n⏰ Isso pode levar bastante tempo...`);
+
+        const result = await this.groupHandler.joinRandomGroups(targetCount);
+
+        if (result.success) {
+            const report = `📊 *RELATÓRIO DE ENTRADA EM GRUPOS*
+
+✅ Grupos entrados: ${result.joined}
+🎯 Meta: ${result.target}
+🔄 Tentativas: ${result.attempts}
+
+⏰ Concluído em: ${new Date().toLocaleString('pt-BR')}`;
+
+            await msg.reply(report);
+        } else {
+            await msg.reply(`❌ Erro: ${result.message}`);
+        }
+    }
+
+    async showGroupStats(msg, chat) {
+        const stats = await this.groupHandler.getGroupStats();
+
+        if (stats) {
+            const statsText = `📊 *ESTATÍSTICAS DE GRUPOS*
+
+👥 *Total de grupos:* ${stats.totalGroups}
+👑 *Admin em:* ${stats.adminGroups} grupos
+👤 *Membro em:* ${stats.memberGroups} grupos
+📱 *Total de participantes:* ${stats.totalParticipants}
+
+🤖 *Auto-resposta:* ${stats.autoResponder ? '✅ ATIVA' : '❌ INATIVA'}
+
+🎯 *Entrada automática:*
+• Meta: ${stats.joinTarget} grupos
+• Conseguiu entrar: ${stats.joinedCount} grupos
+
+🕐 *Última atualização:* ${new Date().toLocaleString('pt-BR')}`;
+
+            await msg.reply(statsText);
+        } else {
+            await msg.reply('❌ Erro ao obter estatísticas de grupos');
+        }
     }
 }
 

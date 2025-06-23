@@ -1,6 +1,6 @@
-# 🤖 Bot WhatsApp - Casa de Apostas (Railway)
+# 🤖 Bot WhatsApp Avançado - Casa de Apostas (Railway)
 
-Bot completo para WhatsApp hospedado na Railway com sistema administrativo avançado e interface web para QR Code.
+Bot completo para WhatsApp hospedado na Railway com sistema administrativo avançado, auto-resposta em grupos, captura de contatos e entrada automática em grupos.
 
 ## 🚀 Deploy na Railway
 
@@ -62,6 +62,7 @@ Senha: 006007
 - `/stats` - Estatísticas do bot
 - `/contacts` - Baixar lista de contatos
 - `/config` - Ver configurações atuais
+- `/statsgrupos` - Estatísticas de grupos
 
 #### 📝 Configurações
 - `/setmessage [tipo] [mensagem]` - Alterar mensagens
@@ -72,30 +73,87 @@ Senha: 006007
 - `/sendaudio` - Enviar áudio (responda um áudio)
 - `/sendmedia` - Enviar mídia (responda uma mídia)
 
-## 🛡️ Recursos Anti-Ban
+#### 👥 **NOVOS COMANDOS DE GRUPOS:**
 
-- ✅ Delays aleatórios entre envios (3-8 segundos)
-- ✅ Variações automáticas de mensagens
-- ✅ Simulação de comportamento humano
-- ✅ Limitação de envios por minuto
-- ✅ QR Code único (evita spam de códigos)
-- ✅ Interface web profissional
+##### 🤖 Auto-Resposta em Grupos
+- `/autoresponder on` - Ativar auto-resposta em grupos
+- `/autoresponder off` - Desativar auto-resposta em grupos
 
-## 🔄 Fluxo do Cliente
+**Como funciona:**
+- Bot responde automaticamente em grupos com links de cadastro
+- Delay de 30 segundos a 2 minutos entre respostas
+- Cooldown de 5 minutos por grupo (evita spam)
+- Mensagens variadas com emojis diferentes
+- Sistema anti-ban com delays inteligentes
 
-1. **Cliente chega do Facebook** → Recebe boas-vindas + link da casa principal
-2. **Qualquer resposta** → Bot solicita screenshot do depósito
-3. **Texto enviado** → Bot pede novamente a foto
+##### 📋 Captura de Contatos
+- `/capturarcontatos` - Capturar contatos de TODOS os grupos
+
+**Melhorias:**
+- Captura de todos os grupos (mesmo removido)
+- Delay de 5 segundos entre grupos
+- Arquivo TXT apenas com números (sem +)
+- Sistema robusto contra erros
+- Progresso em tempo real
+
+##### 📢 Mensagem para Grupos
+- `/mensagemgrupos [mensagem]` - Enviar mensagem para todos os grupos
+
+**Funcionalidades:**
+- Marca TODOS os participantes (sem mostrar números)
+- Delay de 10-30 segundos entre grupos
+- Relatório completo de envios
+- Sistema anti-ban
+
+##### 🎯 Entrada Automática em Grupos
+- `/entrargrupos [número]` - Entrar em grupos aleatórios
+
+**Como funciona:**
+- Gera links aleatórios de grupos WhatsApp
+- Tenta entrar até conseguir o número desejado
+- Delay de 30-60 segundos entre entradas
+- Máximo 10 tentativas por grupo desejado
+- Para automaticamente ao atingir a meta
+
+**Exemplo:** `/entrargrupos 50` - Tenta entrar em 50 grupos
+
+## 🛡️ Recursos Anti-Ban Avançados
+
+### ✅ **Para Mensagens Privadas:**
+- Delays aleatórios entre envios (3-8 segundos)
+- Variações automáticas de mensagens
+- Simulação de comportamento humano
+- Limitação de envios por minuto
+
+### ✅ **Para Grupos:**
+- Cooldown de 5 minutos por grupo
+- Delay aleatório de 30s-2min para auto-resposta
+- Delay de 10-30s para broadcast
+- Delay de 30-60s para entrada em grupos
+- Mensagens variadas com emojis diferentes
+- Sistema inteligente de detecção de spam
+
+### ✅ **Geral:**
+- QR Code único (evita spam de códigos)
+- Interface web profissional
+- Reconexão automática
+- Logs detalhados
+
+## 🔄 Fluxo do Cliente (Melhorado)
+
+1. **Cliente chega** → Recebe boas-vindas + link da casa principal
+2. **Qualquer resposta** → Bot vai direto para aguardar screenshot
+3. **Texto enviado** → Bot pede a foto do comprovante
 4. **Foto enviada** → Libera acesso ao grupo VIP + incentiva outras casas
-5. **Mensagens seguintes** → Continua incentivando cadastros
+5. **Mensagens seguintes** → Continua incentivando cadastros (30% de chance)
 
-## 📊 Monitoramento
+## 📊 Monitoramento Avançado
 
 - **Interface web**: Status em tempo real na URL
 - **Logs Railway**: Logs completos no painel
-- **Estatísticas**: Via comando `/stats`
-- **Relatórios**: De envios em massa
-- **Backup automático**: De contatos
+- **Estatísticas**: Via comando `/stats` e `/statsgrupos`
+- **Relatórios**: De envios em massa e grupos
+- **Backup automático**: De contatos por data
 
 ## 🌐 Como Encontrar sua URL
 
@@ -124,6 +182,7 @@ Procure nos logs por:
 - ✅ **Logs limpos**: Fácil visualização
 - ✅ **Error handling**: Tratamento completo de erros
 - ✅ **Status API**: Endpoint `/api/status` para monitoramento
+- ✅ **Sistema de grupos**: Completo e robusto
 
 ## 🔧 Troubleshooting
 
@@ -137,12 +196,18 @@ Procure nos logs por:
 2. Novo QR Code será gerado na URL
 3. Monitore os logs para acompanhar
 
-### URL não funciona:
-1. Verifique se o deploy foi bem-sucedido
-2. Aguarde alguns minutos após o deploy
-3. Teste a URL em navegador anônimo
+### Auto-resposta não funciona:
+1. Verifique se está ativada: `/autoresponder on`
+2. Aguarde o delay (30s-2min)
+3. Verifique se não está em cooldown (5min)
+
+### Captura de contatos falha:
+1. Sistema robusto com retry automático
+2. Captura 1 grupo a cada 5 segundos
+3. Continua mesmo com erros individuais
 
 ---
 
-**🚀 Agora com interface web profissional para QR Code!**
+**🚀 Agora com sistema completo de grupos e auto-resposta!**
 **🌐 Acesse sua URL da Railway e conecte facilmente!**
+**👥 Sistema anti-ban avançado para grupos!**
