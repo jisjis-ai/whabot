@@ -1,43 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthProvider';
 import LandingPage from '../components/LandingPage';
-import Dashboard from '../components/Dashboard';
-import AdminPanel from '../components/AdminPanel';
-import { isAdmin } from '../lib/auth';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function Home() {
-  const { user, userData, loading } = useAuth();
-  const [showAdmin, setShowAdmin] = useState(false);
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    if (user && userData) {
-      setShowAdmin(isAdmin(user.email));
+    if (user && !loading) {
+      router.push('/dashboard');
     }
-  }, [user, userData]);
+  }, [user, loading, router]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="spinner mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando WhatsApp Pro...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
-  // Se não está logado, mostrar landing page
-  if (!user) {
-    return <LandingPage />;
+  if (user) {
+    return <LoadingSpinner />;
   }
 
-  // Se é admin, mostrar painel admin
-  if (showAdmin) {
-    return <AdminPanel />;
-  }
-
-  // Usuário normal, mostrar dashboard
-  return <Dashboard />;
+  return <LandingPage />;
 }

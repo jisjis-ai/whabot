@@ -4,7 +4,7 @@ const nextConfig = {
     appDir: true,
   },
   images: {
-    domains: ['firebasestorage.googleapis.com'],
+    domains: ['images.unsplash.com', 'via.placeholder.com'],
   },
   env: {
     CUSTOM_KEY: 'my-value',
