@@ -40,7 +40,7 @@ const client = new Client({
 
 // Inicializar handlers
 const userHandler = new UserHandler(client);
-const adminHandler = new AdminHandler(client);
+const adminHandler = new AdminHandler(client, userHandler);
 const groupHandler = new GroupHandler(client);
 
 // Variável para controlar QR Code
@@ -184,6 +184,14 @@ app.get('/', (req, res) => {
                 transform: translateY(-2px);
             }
             
+            .stats {
+                margin-top: 30px;
+                padding: 20px;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 10px;
+                font-size: 0.9em;
+            }
+            
             @media (max-width: 600px) {
                 .container {
                     padding: 20px;
@@ -227,6 +235,14 @@ app.get('/', (req, res) => {
                     <li>Toque em <strong>"Conectar dispositivo"</strong></li>
                     <li><strong>Escaneie o QR Code</strong> acima</li>
                 </ol>
+            </div>
+            
+            <div class="stats">
+                <strong>🔗 URL desta página:</strong><br>
+                <span style="color: #FFD700;">${req.get('host')}</span><br><br>
+                <strong>💾 Estados persistentes:</strong> ✅ Ativo<br>
+                <strong>👥 Sistema de grupos:</strong> ✅ Funcionando<br>
+                <strong>🤖 Auto-resposta:</strong> ✅ Disponível
             </div>
             
             <button class="refresh-btn" onclick="location.reload()">
@@ -273,19 +289,31 @@ function getStatusClass() {
 
 // Rota para API do status
 app.get('/api/status', (req, res) => {
+    const stats = userHandler.getStats();
+    
     res.json({
         status: botStatus,
         qrCode: currentQRCode,
         expireTime: qrExpireTime,
-        connected: botStatus.includes('Conectado')
+        connected: botStatus.includes('Conectado'),
+        userStats: stats,
+        features: {
+            persistentStates: true,
+            groupSystem: true,
+            autoResponder: config.groupSettings.autoResponder
+        }
     });
 });
 
 // Iniciar servidor Express
 app.listen(PORT, () => {
+    const serverUrl = process.env.RAILWAY_STATIC_URL || 
+                     process.env.RAILWAY_PUBLIC_DOMAIN || 
+                     `http://localhost:${PORT}`;
+    
     console.log('\n' + '🌐'.repeat(20));
     console.log(`🚀 SERVIDOR WEB INICIADO!`);
-    console.log(`🔗 URL: https://seu-projeto.railway.app`);
+    console.log(`🔗 URL: ${serverUrl}`);
     console.log(`📱 Acesse a URL para escanear o QR Code`);
     console.log('🌐'.repeat(20) + '\n');
     
@@ -313,14 +341,20 @@ client.on('qr', async qr => {
         
         qrExpireTime = Date.now() + 20000; // 20 segundos
         
+        const serverUrl = process.env.RAILWAY_STATIC_URL || 
+                         process.env.RAILWAY_PUBLIC_DOMAIN || 
+                         'sua-url-railway.app';
+        
         console.clear();
         console.log('\n' + '='.repeat(60));
         console.log('🤖 BOT WHATSAPP - CASA DE APOSTAS AVANÇADO');
         console.log('='.repeat(60));
         console.log('\n🌐 ACESSE A URL PARA ESCANEAR O QR CODE:');
-        console.log(`🔗 https://seu-projeto.railway.app`);
+        console.log(`🔗 ${serverUrl}`);
         console.log('\n📱 QR Code disponível na página web!');
         console.log('⏰ Válido por 20 segundos');
+        console.log('💾 Estados persistentes ATIVO');
+        console.log('👥 Sistema de grupos FUNCIONANDO');
         console.log('='.repeat(60) + '\n');
         
         // QR Code no terminal também (menor)
@@ -363,6 +397,7 @@ client.on('ready', () => {
     console.log('🤖 Sistema avançado de casa de apostas ATIVO');
     console.log('👨‍💼 Sistema administrativo DISPONÍVEL');
     console.log('👥 Sistema de grupos ATIVO');
+    console.log('💾 Estados persistentes FUNCIONANDO');
     console.log('🚀 Pronto para receber clientes!');
     console.log('🎉'.repeat(20) + '\n');
     
@@ -377,7 +412,18 @@ client.on('ready', () => {
     console.log('🔑 Senha admin: 006007');
     console.log('='.repeat(50) + '\n');
     
-    Helpers.log('Bot conectado com sucesso na Railway', 'SYSTEM');
+    // Carregar estatísticas iniciais
+    const stats = userHandler.getStats();
+    console.log('📊 ESTATÍSTICAS CARREGADAS:');
+    console.log(`👥 Total de usuários: ${stats.total}`);
+    console.log('='.repeat(50) + '\n');
+    
+    Helpers.log('Bot conectado com sucesso na Railway com estados persistentes', 'SYSTEM');
+    
+    // Limpeza automática de estados antigos (diária)
+    setInterval(() => {
+        userHandler.cleanOldStates();
+    }, 24 * 60 * 60 * 1000); // 24 horas
 });
 
 // Evento de desconexão
@@ -506,6 +552,7 @@ console.log('\n🚀 INICIANDO BOT WHATSAPP AVANÇADO NA RAILWAY...');
 console.log('📡 Conectando ao WhatsApp Web...');
 console.log('🌐 Servidor web iniciando...');
 console.log('👥 Sistema de grupos ativo...');
+console.log('💾 Estados persistentes ativo...');
 console.log('⏳ Aguarde o QR Code...\n');
 
 botStatus = '🚀 Iniciando bot avançado...';
@@ -515,5 +562,6 @@ client.initialize();
 module.exports = {
     client,
     config,
-    groupHandler
+    groupHandler,
+    userHandler
 };

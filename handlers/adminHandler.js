@@ -5,8 +5,9 @@ const fs = require('fs');
 const path = require('path');
 
 class AdminHandler {
-    constructor(client) {
+    constructor(client, userHandler) {
         this.client = client;
+        this.userHandler = userHandler;
         this.adminSessions = new Map(); // Sessões de admin logados
         this.groupHandler = new GroupHandler(client);
     }
@@ -121,6 +122,15 @@ Senha: suasenha
             case '/statsgrupos':
                 await this.showGroupStats(msg, chat);
                 break;
+
+            // Novos comandos de estados
+            case '/limparestados':
+                await this.cleanOldStates(msg, chat);
+                break;
+
+            case '/estadosusuarios':
+                await this.showUserStates(msg, chat);
+                break;
             
             default:
                 await msg.reply('❌ Comando não reconhecido. Digite /help para ver os comandos disponíveis.');
@@ -187,6 +197,7 @@ Senha: suasenha
 • \`/contacts\` - Baixar lista de contatos
 • \`/config\` - Ver configurações atuais
 • \`/statsgrupos\` - Estatísticas de grupos
+• \`/estadosusuarios\` - Estados dos usuários
 
 📝 *CONFIGURAÇÕES:*
 • \`/setmessage [tipo] [mensagem]\` - Alterar mensagens
@@ -202,6 +213,9 @@ Senha: suasenha
 • \`/capturarcontatos\` - Capturar contatos de todos os grupos
 • \`/mensagemgrupos [mensagem]\` - Enviar para todos os grupos
 • \`/entrargrupos [número]\` - Entrar em grupos aleatórios
+
+🧹 *MANUTENÇÃO:*
+• \`/limparestados\` - Limpar estados antigos (30+ dias)
 
 💡 *EXEMPLOS:*
 \`/autoresponder on\` - Ativa auto-resposta em grupos
@@ -243,7 +257,9 @@ Senha: suasenha
             return;
         }
 
-        const contacts = Array.from(config.userStates.keys());
+        // Obter todos os usuários do estado persistente
+        const userStates = this.userHandler.stateManager.getAllStates();
+        const contacts = Array.from(userStates.keys());
         let successCount = 0;
         let errorCount = 0;
 
@@ -285,26 +301,60 @@ Senha: suasenha
     }
 
     async showStats(msg, chat) {
-        const totalUsers = config.userStates.size;
-        const usersByState = {};
-        
-        for (const [user, state] of config.userStates.entries()) {
-            usersByState[state] = (usersByState[state] || 0) + 1;
-        }
+        const stats = this.userHandler.getStats();
 
         const statsText = `📊 *ESTATÍSTICAS DO BOT*
 
-👥 *Total de usuários:* ${totalUsers}
+👥 *Total de usuários:* ${stats.total}
 
 📈 *Por estado:*
-• Inicial: ${usersByState.initial || 0}
-• Aguardando depósito: ${usersByState.waiting_deposit || 0}
-• Aguardando screenshot: ${usersByState.waiting_screenshot || 0}
-• Concluído: ${usersByState.completed || 0}
+${Object.entries(stats.byState).map(([state, count]) => 
+    `• ${this.getStateLabel(state)}: ${count}`
+).join('\n')}
 
 🕐 *Última atualização:* ${new Date().toLocaleString('pt-BR')}`;
 
         await msg.reply(statsText);
+    }
+
+    getStateLabel(state) {
+        const labels = {
+            'initial': 'Inicial',
+            'waiting_deposit': 'Aguardando depósito',
+            'waiting_screenshot': 'Aguardando screenshot',
+            'completed': 'Concluído'
+        };
+        return labels[state] || state;
+    }
+
+    async showUserStates(msg, chat) {
+        const userStates = this.userHandler.stateManager.getAllStates();
+        let report = '👥 *ESTADOS DOS USUÁRIOS:*\n\n';
+
+        let count = 0;
+        for (const [userNumber, stateData] of userStates.entries()) {
+            if (count >= 20) { // Limitar a 20 para não ficar muito longo
+                report += `\n... e mais ${userStates.size - 20} usuários`;
+                break;
+            }
+
+            const state = stateData.state || stateData;
+            const timestamp = stateData.timestamp || 'N/A';
+            
+            report += `📱 ${userNumber.slice(-4)}: ${this.getStateLabel(state)}\n`;
+            count++;
+        }
+
+        await msg.reply(report);
+    }
+
+    async cleanOldStates(msg, chat) {
+        await msg.reply('🧹 Limpando estados antigos...');
+        
+        this.userHandler.cleanOldStates();
+        
+        const stats = this.userHandler.getStats();
+        await msg.reply(`✅ Limpeza concluída!\n\n📊 Usuários ativos: ${stats.total}`);
     }
 
     async setMessage(msg, chat, messageBody) {
@@ -381,7 +431,8 @@ ${config.groupLink}
         }
 
         const media = await quotedMsg.downloadMedia();
-        const contacts = Array.from(config.userStates.keys());
+        const userStates = this.userHandler.stateManager.getAllStates();
+        const contacts = Array.from(userStates.keys());
         
         await msg.reply(`🎵 Iniciando envio de áudio para ${contacts.length} contatos...`);
 
@@ -412,7 +463,8 @@ ${config.groupLink}
         }
 
         const media = await quotedMsg.downloadMedia();
-        const contacts = Array.from(config.userStates.keys());
+        const userStates = this.userHandler.stateManager.getAllStates();
+        const contacts = Array.from(userStates.keys());
         
         await msg.reply(`📎 Iniciando envio de mídia para ${contacts.length} contatos...`);
 
